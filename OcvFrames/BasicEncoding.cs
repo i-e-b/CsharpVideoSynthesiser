@@ -42,8 +42,8 @@ namespace OcvFrames
         {
             const string path = "simple_recursive_quicksort.mp4";
             
-            const int width = 640;//1920;
-            const int height = 448;//1080;
+            const int width = 1920;//640;//1920;
+            const int height = 1080;//448;//1080;
             const int fps = 60;
             
             using var subject = new VideoFileSynthesiser(path, width, height, fps);

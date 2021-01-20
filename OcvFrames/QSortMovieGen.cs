@@ -27,6 +27,7 @@ namespace OcvFrames
         private int _pivotPoint;
         private int _left;
         private int _right;
+        private byte _pivotValue;
 
         public QSortMovieGen(int width, int height, int itemCount)
         {
@@ -49,9 +50,9 @@ namespace OcvFrames
 
         public bool DrawFrame(int frameNumber, Graphics g)
         {
-            if (frameNumber > 6000) return false; // uncomment to limit for testing
+            if (frameNumber > 50_000) return false; // reduce for testing
 
-            var mid = _height / 2.0f;
+            var mid = _height * 0.75f;
             var xs = _width / (_itemCount + 1.0f);
             var ys = mid / 255.0f;
 
@@ -63,8 +64,9 @@ namespace OcvFrames
             g.FillRectangle(Brushes.Blue, 0, 0, _width, mid); // top shows data, bottom shows stack span "flame graph"
             
             // indicators
+            var pp = mid - (_pivotValue * ys);
             g.FillRectangle(Brushes.Aqua, _activeSpanLeft*xs, mid + 1, _activeSpanWidth*xs, 10); // active span
-            g.FillRectangle(Brushes.DarkCyan, _pivotPoint*xs, mid + 1, 4, 10); // pivot
+            g.FillRectangle(Brushes.DarkCyan, _pivotPoint*xs, pp, 4, mid - pp); // pivot
             g.FillRectangle(Brushes.Fuchsia, _left*xs, mid + 1, 4, 10); // cursor left
             g.FillRectangle(Brushes.Red, _right*xs, mid + 1, 4, 10); // cursor right
             
@@ -73,8 +75,8 @@ namespace OcvFrames
             var pos = mid + 15;
             foreach (var span in currentStack)
             {
-                g.FillRectangle(Brushes.Orange, span.Left*xs, pos, (span.Right-span.Left)*xs, 2); // active span
-                pos += 2;
+                g.FillRectangle(Brushes.Orange, span.Left*xs, pos, (span.Right-span.Left)*xs, 4); // active span
+                pos += 4;
             }
 
             var mx = 0.0;
@@ -84,14 +86,14 @@ namespace OcvFrames
                 var x = i * xs;
                 mx = Math.Max(x, mx);
 
-                g.FillEllipse(Brushes.Lavender, x - 2, a - 2, 4, 4);
+                g.FillRectangle(Brushes.LightBlue, x - 2, a - 2, 4, 4);
             }
 
             // Title
             g.DrawString($"Recursive quick sort. {_itemCount} items (random)", _font, Brushes.WhiteSmoke, 10, 24);
             g.DrawString($"{_compareCount} compares, {_copyCount} copies, {_swapCount} swaps", _fontSmall, Brushes.WhiteSmoke, 10, 70);
             g.DrawString($"{_steps} iterations, stack depth {_stack.Count}, span {_activeSpanWidth} elements.", _fontSmall, Brushes.WhiteSmoke, 10, 90);
-            g.DrawString($"n = {_itemCount}; O(n log n) = {_estComplex}, n auxiliary space", _fontSmall, Brushes.WhiteSmoke, 10, 110);
+            g.DrawString($"n = {_itemCount}; O(n log n) = {_estComplex}, O(log n) auxiliary space", _fontSmall, Brushes.WhiteSmoke, 10, 110);
 
 
             try
@@ -120,57 +122,60 @@ namespace OcvFrames
                 _activeSpanLeft = span.Left;
                 _activeSpanWidth = span.Right - span.Left;
 
-                if (_activeSpanWidth <= 4)
-                {
-                    if (Compare(_left, _data[_left+1])) Swap(_left, _left+1);
-                    if (Compare(_right - 1, _data[_right])) Swap(_right, _right-1);
-                    if (Compare(_left+1, _data[_right - 1])) Swap(_left+1, _right-1);
+                if (_activeSpanWidth < 2) continue;
+                if (_activeSpanWidth <= 4){
+                    // simple bubble sort for the smallest spans
+                    var min = Math.Max(0, _left);
+                    var max = Math.Min(len-2, _right);
+                    for (var bi = max; bi >= min; bi--) {
+                        for (var b = min; b <= bi; b++) if (CompareMore(b, _data[b+1])) Swap(b, b+1);
+                    }
                     continue;
                 }
 
+                #region pivot
                 // pick a pivot, by middle-of-three
-                var centre = span.Left + ((span.Right-span.Left) / 2); // smarter q-sorts pick best-out-of-n or similar
-                var pL = _data[_left];
+                var halfWidth = _activeSpanWidth / 2;
+                var quarterWidth = halfWidth / 2;
+                var centre = span.Left + halfWidth;
+                var offL = centre - quarterWidth;
+                var offR = centre + quarterWidth;
+                var pL = _data[offL];
                 var pC = _data[centre];
-                var pR = _data[_right];
-                byte pivotValue;
+                var pR = _data[offR];
                 
                 // pick most middle:
-                if (pL > pC && pC > pR) { _pivotPoint = centre; pivotValue = pC; _compareCount += 2; }
-                else if (pC > pL && pL > pR) { _pivotPoint = _left; pivotValue = pL; _compareCount += 4; }
-                else { _pivotPoint = _right; pivotValue = pR; _compareCount += 4;  }
+                if (pL > pC && pC > pR) { _pivotPoint = centre; _pivotValue = pC; _compareCount += 2; }
+                else if (pC > pL && pL > pR) { _pivotPoint = offL; _pivotValue = pL; _compareCount += 4; }
+                else { _pivotPoint = offR; _pivotValue = pR; _compareCount += 4;  }
+                #endregion
 
-
-                // Partition data around pivot *value* by swapping left and right sides
-                for (;; _left++, _right--)
+                // Partition data around pivot *value* by swapping  at left and right sides of a shrinking sample window
+                while (true)
                 {
-                    while (_left < _right && Compare(_left, pivotValue))
+                    while (_left < _right && CompareLess(_left, _pivotValue))
                     {
                         _left++;
                         yield return _steps++;
                     }
 
-                    while (_left < _right && !Compare(_right, pivotValue))
+                    while (_left < _right && CompareMore(_right, _pivotValue))
                     {
                         _right--;
                         yield return _steps++;
                     }
 
-                    if (_left >= _right)
-                    {
-                        yield return _steps++;
-                        break;
-                    }
+                    if (_left >= _right) { break; }
 
-                    Swap(_left, _right);
+                    if (!Compare(_left, _right)) Swap(_left, _right);
+                    _left++; _right--;
                     yield return _steps++;
                 }
 
                 // recurse
-                if (_right == span.Right) _right--;
-
+                var adj = (_right == span.Left) ? 1 : 0;
+                _stack.Push(new IdxSpan {Left = _right + adj, Right = span.Right}); // right side
                 _stack.Push(new IdxSpan {Left = span.Left, Right = _right}); // left side
-                //_stack.Push(new IdxSpan {Left = _left, Right = span.Right}); // right side
                 yield return _steps++;
             }
         }
@@ -183,11 +188,23 @@ namespace OcvFrames
             _data[t] = _data[x];
             _data[x] = tmp;
         }
-
-        private bool Compare(int l, int value)
+        
+        private bool Compare(int i, int j)
         {
             _compareCount++;
-            return _data[l] < value;
+            return _data[i] < _data[j];
+        }
+
+        private bool CompareLess(int i, int value)
+        {
+            _compareCount++;
+            return _data[i] < value;
+        }
+        
+        private bool CompareMore(int i, int value)
+        {
+            _compareCount++;
+            return _data[i] > value;
         }
 
 
