@@ -22,9 +22,9 @@ namespace OcvFrames
         private bool _aIsSource = true;
         private int _steps, _mergeWindow;
         private int _lastLeft, _lastRight, _lastInsert;
-        private int _compareCount = 0;
-        private int _copyCount = 0;
-        private int _swapCount = 0;
+        private int _compareCount;
+        private int _copyCount;
+        private int _swapCount;
 
         public MergeMovieGen(int width, int height, int itemCount)
         {

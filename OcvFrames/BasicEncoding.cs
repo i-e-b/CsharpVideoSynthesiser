@@ -1,8 +1,4 @@
-﻿using System.Drawing.Imaging;
-using System.IO;
-using System.Linq;
-using Emgu.CV;
-using Emgu.CV.CvEnum;
+﻿using System.IO;
 using NUnit.Framework;
 
 namespace OcvFrames
@@ -26,7 +22,7 @@ namespace OcvFrames
         }
 
         [Test]
-        public void sorting_video_demo()
+        public void merge_sort_video()
         {
             // Everyone does one of these, right?
             const string path = "bottom_up_merge.mp4";
@@ -37,6 +33,21 @@ namespace OcvFrames
             
             using var subject = new VideoFileSynthesiser(path, width, height, fps);
             subject.WriteVideo(new MergeMovieGen(width, height, itemCount:1024));
+
+            Assert.That(File.Exists(path), "file was not written");
+        }
+
+        [Test]
+        public void quick_sort_video()
+        {
+            const string path = "simple_recursive_quicksort.mp4";
+            
+            const int width = 640;//1920;
+            const int height = 448;//1080;
+            const int fps = 60;
+            
+            using var subject = new VideoFileSynthesiser(path, width, height, fps);
+            subject.WriteVideo(new QSortMovieGen(width, height, itemCount:1024));
 
             Assert.That(File.Exists(path), "file was not written");
         }
