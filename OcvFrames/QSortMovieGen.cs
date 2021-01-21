@@ -207,10 +207,11 @@ namespace OcvFrames
             return _data[i] > value;
         }
 
-
         public void Dispose()
         {
-            // TODO: rebuild later
+            _font.Dispose();
+            _fontSmall.Dispose();
+            _iterator.Dispose();
         }
     }
 
