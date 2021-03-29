@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using NUnit.Framework;
+using OcvFrames.SortMovies;
 
 namespace OcvFrames
 {
@@ -32,7 +33,7 @@ namespace OcvFrames
             const int fps = 60;
             
             using var subject = new VideoFileSynthesiser(path, width, height, fps);
-            subject.WriteVideo(new MergeMovieGen(width, height, itemCount:1024));
+            subject.WriteVideo(new MergeMovieGen(width, height, "scatter reverse", DataSets.ScatterReverse(512)));
 
             Assert.That(File.Exists(path), "file was not written");
         }
@@ -42,27 +43,105 @@ namespace OcvFrames
         {
             const string path = "simple_recursive_quicksort.mp4";
             
+            const int width = 1920;//640;//1920;
+            const int height = 1080;//448;//1080;
+            const int fps = 60;
+            
+            using var subject = new VideoFileSynthesiser(path, width, height, fps);
+            subject.WriteVideo(new QSortMovieGen(width, height, "scatter reverse", DataSets.ScatterReverse(1024)));
+
+            Assert.That(File.Exists(path), "file was not written");
+        }
+        
+        [Test]
+        public void quick_sort_with_prephase_video()
+        {
+            // This sort is pretty bad.
+            const string path = "prephase_recursive_quicksort.mp4";
+            
             const int width = 640;//1920;
             const int height = 448;//1080;
             const int fps = 60;
             
             using var subject = new VideoFileSynthesiser(path, width, height, fps);
-            subject.WriteVideo(new QSortMovieGen(width, height, itemCount:1024));
+            subject.WriteVideo(new QSortPrephaseMovieGen(width, height,"scatter reverse", DataSets.ScatterReverse(512)));
 
             Assert.That(File.Exists(path), "file was not written");
         }
+
         
         [Test]
         public void heap_sort_video()
         {
             const string path = "min_heap_sort.mp4";
             
+            const int width = 640;//1920;
+            const int height = 448;//1080;
+            const int fps = 60;
+            
+            using var subject = new VideoFileSynthesiser(path, width, height, fps);
+            subject.WriteVideo(new HeapMovieGen(width, height, "random", DataSets.Random(128)));
+
+            Assert.That(File.Exists(path), "file was not written");
+        }
+        
+        [Test]
+        public void optimised_heap_sort_video()
+        {
+            const string path = "opt_heap_sort.mp4";
+            
             const int width = 1920;//640;//1920;
             const int height = 1080;//448;//1080;
             const int fps = 60;
             
             using var subject = new VideoFileSynthesiser(path, width, height, fps);
-            subject.WriteVideo(new HeapMovieGen(width, height, itemCount:1024));
+            subject.WriteVideo(new OptimisedHeapMovieGen(width, height, "random", DataSets.Random(1024)));
+
+            Assert.That(File.Exists(path), "file was not written");
+        }
+        
+        [Test]
+        public void repeated_heap_sort_video()
+        {
+            const string path = "repeated_heap_sort.mp4";
+            
+            const int width = 640;//1920;
+            const int height = 448;//1080;
+            const int fps = 60;
+            
+            using var subject = new VideoFileSynthesiser(path, width, height, fps);
+            subject.WriteVideo(new RepeatHeapMovieGen(width, height, "scatter reverse", DataSets.ScatterReverse(128)));
+
+            Assert.That(File.Exists(path), "file was not written");
+        }
+
+
+        [Test]
+        public void radix_merge_sort_video()
+        {
+            const string path = "radix_merge_sort.mp4";
+            
+            const int width = 1920;//640;//1920;
+            const int height = 1080;//448;//1080;
+            const int fps = 60;
+            
+            using var subject = new VideoFileSynthesiser(path, width, height, fps);
+            subject.WriteVideo(new RadixMergeMovieGen(width, height, "random", DataSets.Random(1024)));
+
+            Assert.That(File.Exists(path), "file was not written");
+        }
+
+        [Test]
+        public void tournament_sort_video()
+        {
+            const string path = "tournament_sort.mp4";
+            
+            const int width = 640;//1920;
+            const int height = 448;//1080;
+            const int fps = 60;
+            
+            using var subject = new VideoFileSynthesiser(path, width, height, fps);
+            subject.WriteVideo(new TournamentSortMovieGen(width, height, "random", DataSets.Random(32)));
 
             Assert.That(File.Exists(path), "file was not written");
         }

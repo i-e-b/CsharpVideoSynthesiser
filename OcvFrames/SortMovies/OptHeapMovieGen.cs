@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 
-namespace OcvFrames
+namespace OcvFrames.SortMovies
 {
-    public class HeapMovieGen : IVideoGenerator, IDisposable
+    public class OptimisedHeapMovieGen : IVideoGenerator, IDisposable
     {
         
         private readonly Font _font;
@@ -13,6 +13,7 @@ namespace OcvFrames
 
         private readonly int _width;
         private readonly int _height;
+        private readonly string _name;
         private readonly int _itemCount;
         private readonly int _estComplex;
 
@@ -26,17 +27,15 @@ namespace OcvFrames
         private int _back;
         private int _mid;
 
-        public HeapMovieGen(int width, int height, int itemCount)
+        public OptimisedHeapMovieGen(int width, int height, string name, byte[] data)
         {
             _width = width;
             _height = height;
-            _itemCount = itemCount;
+            _name = name;
+            _data = data;
+            _itemCount = data.Length;
             _font = new Font("Dave", 24);
             _fontSmall = new Font("Dave", 18);
-
-            var rnd = new Random();
-            _data = new byte[_itemCount];
-            rnd.NextBytes(_data);
 
             _estComplex = (int) (Math.Log2(_itemCount) * _itemCount);
 
@@ -74,9 +73,9 @@ namespace OcvFrames
             }
 
             // Title
-            g.DrawString($"Naïve iterative heap sort. {_itemCount} items (random)", _font, Brushes.WhiteSmoke, 10, 24);
+            g.DrawString($"Optimised max-heap sort. {_itemCount} items ({_name})", _font, Brushes.WhiteSmoke, 10, 24);
             g.DrawString($"{_compareCount} compares, {_copyCount} copies, {_swapCount} swaps", _fontSmall, Brushes.WhiteSmoke, 10, 70);
-            g.DrawString($"{_steps} iterations, ...other details...?", _fontSmall, Brushes.WhiteSmoke, 10, 90);
+            g.DrawString($"{_steps} iterations", _fontSmall, Brushes.WhiteSmoke, 10, 90);
             g.DrawString($"n = {_itemCount}; O(n log n) = {_estComplex}, O(1) auxiliary space", _fontSmall, Brushes.WhiteSmoke, 10, 110);
 
             try
@@ -94,36 +93,6 @@ namespace OcvFrames
         {
             var len = _itemCount;
             if (len < 2) yield break;
-            
-            
-            // run heap rule repeated, offset by 3
-            // this is really an n^2 sort; doesn't take advantage of the heap rule
-            /*for (int offset = 0; offset < len-2; offset+=3)
-            {
-                
-                for (int head = 1; head < len-offset; head++)
-                {
-                    _front = head+offset;
-                    var toAdd = _data[head+offset]; // item we're 'adding' the the heaped zone
-                    int i;
-                    for (i = head; i>0 && Compare(_data[offset+(i>>1)], toAdd); i >>= 1) // while the heap is out of order
-                    {
-                        _copyCount++;
-                        _data[i+offset] = _data[offset+(i>>1)]; // push higher values toward the right
-                        _mid = i+offset;
-                        _back = offset+(i>>1);
-                        yield return _steps++;
-                    }
-                    _copyCount++;
-                    _back = _mid = i+offset;
-                    _data[i+offset] = toAdd; // then add value in place where we stopped (toward the left)
-                    yield return _steps++;
-                }
-                // first is in place, check next two
-                if (Compare(_data[offset+1], _data[offset+2])) Swap(offset+1,offset+2);
-                yield return _steps++;
-            }*/
-            
             
             
             // Rearrange the initial array to it conforms to the heap rule.
@@ -147,17 +116,16 @@ namespace OcvFrames
                 yield return _steps++;
             }
             
-            
-            // Now item zero should be the lowest in the array;
-            // after the heaping, the head item should always be in the correct place,
-            // so we 'remove' the head, keeping it in place
-            // and 'percolate' the heap rule back down the array
+            // Remove an item, 'percolate' the heap rule back down the array
             // and repeat until the heap is 'empty'
             
             var end = len - 1;
+            var trip = end >> 1;
             while (end > 0)
             {
-                var min = _data[1];
+                if (trip -- > 0 && Compare(_data[end], _data[0])) Swap(0,end);
+                var max = _data[1];
+                
                 var last = _data[end--];
 
                 int i, child;
@@ -178,18 +146,7 @@ namespace OcvFrames
                     yield return _steps++;
                 }
                 _data[i] = last;
-                _data[end+1] = min;
-
-                yield return _steps++;
-            }
-            
-            // the list is currently backwards. Swap forwards
-            int l = 1, r = len-1;
-            while (l < r)
-            {
-                _back = l; _front = r; _mid = 0;
-                Swap(l,r);
-                l++; r--;
+                _data[end+1] = max;
 
                 yield return _steps++;
             }
@@ -207,7 +164,7 @@ namespace OcvFrames
         private bool Compare(byte a, byte b)
         {
             _compareCount++;
-            return a > b; // note, we're comparing the heap property, not the item ordering
+            return a < b; // note, we're comparing the heap property, not the item ordering
         }
 
         public void Dispose()

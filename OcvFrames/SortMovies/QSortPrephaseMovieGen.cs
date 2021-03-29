@@ -3,15 +3,16 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 
-namespace OcvFrames
+namespace OcvFrames.SortMovies
 {
-    public class QSortMovieGen : IVideoGenerator, IDisposable
+    public class QSortPrephaseMovieGen : IVideoGenerator, IDisposable
     {
         private readonly Font _font;
         private readonly Font _fontSmall;
 
         private readonly int _width;
         private readonly int _height;
+        private readonly string _name;
         private readonly int _itemCount;
         private readonly int _estComplex;
 
@@ -29,18 +30,17 @@ namespace OcvFrames
         private int _right;
         private byte _pivotValue;
 
-        public QSortMovieGen(int width, int height, int itemCount)
+        public QSortPrephaseMovieGen(int width, int height, string name, byte[] data)
         {
             _width = width;
             _height = height;
-            _itemCount = itemCount;
+            _name = name;
+            _itemCount = data.Length;
+            _data = data;
+
             _font = new Font("Dave", 24);
             _fontSmall = new Font("Dave", 18);
-
-            var rnd = new Random();
-            _data = new byte[_itemCount];
-            rnd.NextBytes(_data);
-
+            
             _estComplex = (int) (Math.Log2(_itemCount) * _itemCount);
 
             _steps = 0;
@@ -67,8 +67,8 @@ namespace OcvFrames
             var pp = mid - (_pivotValue * ys);
             g.FillRectangle(Brushes.Aqua, _activeSpanLeft*xs, mid + 1, _activeSpanWidth*xs, 10); // active span
             g.FillRectangle(Brushes.DarkCyan, _pivotPoint*xs, pp, 4, mid - pp); // pivot
-            g.FillRectangle(Brushes.Fuchsia, _left*xs, mid + 1, 4, 10); // cursor left
-            g.FillRectangle(Brushes.Red, _right*xs, mid + 1, 4, 10); // cursor right
+            g.FillRectangle(Brushes.Fuchsia, _left*xs, 0, 4, mid+10); // cursor left
+            g.FillRectangle(Brushes.Red, _right*xs, 0, 4, mid+10); // cursor right
             
             // draw stack
             var currentStack = _stack.ToArray();
@@ -90,7 +90,7 @@ namespace OcvFrames
             }
 
             // Title
-            g.DrawString($"Recursive quick sort. {_itemCount} items (random)", _font, Brushes.WhiteSmoke, 10, 24);
+            g.DrawString($"Recursive quick sort with pre-sort. {_itemCount} items ({_name})", _font, Brushes.WhiteSmoke, 10, 24);
             g.DrawString($"{_compareCount} compares, {_copyCount} copies, {_swapCount} swaps", _fontSmall, Brushes.WhiteSmoke, 10, 70);
             g.DrawString($"{_steps} iterations, stack depth {_stack.Count}, span {_activeSpanWidth} elements.", _fontSmall, Brushes.WhiteSmoke, 10, 90);
             g.DrawString($"n = {_itemCount}; O(n log n) = {_estComplex}, O(log n) auxiliary space", _fontSmall, Brushes.WhiteSmoke, 10, 110);
@@ -111,7 +111,28 @@ namespace OcvFrames
         {
             var len = _itemCount;
             if (len < 2) yield break;
+            
+            // First, we do the 'heaping' phase of a heap sort
+            // This gets us to a reasonable starting point for the quick sort
+            for (int head = 1; head < len; head++)
+            {
+                _left = head;
+                var toAdd = _data[head]; // item we're 'adding' the the heaped zone
+                int i;
+                for (i = head; i>0 && CompareData(_data[i >> 1], toAdd); i >>= 1) // while the heap is out of order
+                {
+                    _copyCount++;
+                    _data[i] = _data[i>>1]; // push higher values toward the right
+                    _right = i;
+                    yield return _steps++;
+                }
+                _copyCount++;
+                _data[i] = toAdd; // then add value in place where we stopped (toward the left)
+                yield return _steps++;
+            }
+            
 
+            // Now do the quick-sort as normal
             _stack.Push(new IdxSpan {Left = 0, Right = len - 1});
 
             while (_stack.Count > 0)
@@ -133,22 +154,9 @@ namespace OcvFrames
                     continue;
                 }
 
-                #region pivot
-                // pick a pivot, by middle-of-three
-                var halfWidth = _activeSpanWidth / 2;
-                var quarterWidth = halfWidth / 2;
-                var centre = span.Left + halfWidth;
-                var offL = centre - quarterWidth;
-                var offR = centre + quarterWidth;
-                var pL = _data[offL];
-                var pC = _data[centre];
-                var pR = _data[offR];
-                
-                // pick most middle:
-                if (pL > pC && pC > pR) { _pivotPoint = centre; _pivotValue = pC; _compareCount += 2; }
-                else if (pC > pL && pL > pR) { _pivotPoint = offL; _pivotValue = pL; _compareCount += 4; }
-                else { _pivotPoint = offR; _pivotValue = pR; _compareCount += 4;  }
-                #endregion
+                // pivot with a guess based on heap property (middle value likely to be right-of-centre):
+                _pivotPoint = span.Right - ((_activeSpanWidth >> 1) - 1);
+                _pivotValue = _data[_pivotPoint];
 
                 // Partition data around pivot *value* by swapping  at left and right sides of a shrinking sample window
                 while (true)
@@ -178,6 +186,12 @@ namespace OcvFrames
                 _stack.Push(new IdxSpan {Left = span.Left, Right = _right}); // left side
                 yield return _steps++;
             }
+        }
+
+        private bool CompareData(byte a, byte b)
+        {
+            _compareCount++;
+            return a > b; // note, we're comparing the heap property, not the item ordering
         }
 
         private void Swap(int t, int x)
@@ -213,11 +227,5 @@ namespace OcvFrames
             _fontSmall.Dispose();
             _iterator.Dispose();
         }
-    }
-
-    internal class IdxSpan
-    {
-        public int Left { get; set; }
-        public int Right { get; set; }
     }
 }

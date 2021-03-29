@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 
-namespace OcvFrames
+namespace OcvFrames.SortMovies
 {
     public class MergeMovieGen : IVideoGenerator, IDisposable
     {
@@ -25,19 +25,20 @@ namespace OcvFrames
         private int _compareCount;
         private int _copyCount;
         private int _swapCount;
+        private string _name;
 
-        public MergeMovieGen(int width, int height, int itemCount)
+        public MergeMovieGen(int width, int height, string name, byte[] data)
         {
             _width = width;
             _height = height;
-            _itemCount = itemCount;
+            _name = name;
+            _itemCount = data.Length;
+            _a = data;
+            _b = new byte[_itemCount];
+            
             _font = new Font("Dave", 24);
             _fontSmall = new Font("Dave", 18);
             
-            var rnd = new Random();
-            _a = new byte[_itemCount];
-            _b = new byte[_itemCount];
-            rnd.NextBytes(_a);
             
             _estComplex = (int)(Math.Log2(_itemCount) * _itemCount);
             
@@ -62,7 +63,7 @@ namespace OcvFrames
             g.FillRectangle(Brushes.Blue, 0, _aIsSource ? 0 : mid, _width, mid);
             
             // Title
-            g.DrawString($"Bottom up merge. {_itemCount} items (random)", _font, Brushes.WhiteSmoke, 10, 24);
+            g.DrawString($"Bottom up merge. {_itemCount} items ({_name})", _font, Brushes.WhiteSmoke, 10, 24);
             g.DrawString($"{_compareCount} compares, {_copyCount} copies, {_swapCount} swaps, {_steps} iterations, window {_mergeWindow} wide.", _fontSmall, Brushes.WhiteSmoke, 10, 66);
             g.DrawString($"n = {_itemCount}; O(n log n) = {_estComplex}, n auxiliary space", _fontSmall, Brushes.WhiteSmoke, 10, 84);
             
@@ -105,35 +106,23 @@ namespace OcvFrames
                     
                     // copy the lowest candidate across from A to B
                     while (l < right && r < end) {
-                        _lastLeft = l;
-                        _lastRight = r;
-                        _lastInsert = t;
+                        _lastLeft = l; _lastRight = r; _lastInsert = t;
                         
-                        if (Compare(l, r))
-                        {
-                            // compare the two bits to be merged
-                            Copy(t++, l++);
-                            yield return _steps++;
-                        } else {
-                            Copy(t++, r++);
-                            yield return _steps++;
-                        }
-                    } // exhausted at least one of the merge sides
+                        // compare the two bits to be merged
+                        if (Compare(l, r)) Copy(t++, l++);
+                        else Copy(t++, r++);
+                        
+                        yield return _steps++;
+                    } // end of loop : exhausted at least one of the merge sides
 
                     while (l < right) { // run down left if anything remains
-                        _lastLeft = l;
-                        _lastRight = r;
-                        _lastInsert = t;
-                        
+                        _lastLeft = l; _lastRight = r; _lastInsert = t;
                         Copy(t++, l++);
                         yield return _steps++;
                     }
 
                     while (r < end) { // run down right side if anything remains
-                        _lastLeft = l;
-                        _lastRight = r;
-                        _lastInsert = t;
-                        
+                        _lastLeft = l; _lastRight = r; _lastInsert = t;
                         Copy(t++, r++);
                         yield return _steps++;
                     }
