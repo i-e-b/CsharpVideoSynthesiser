@@ -139,13 +139,6 @@ namespace OcvFrames.SortMovies
             }
         }
 
-        private class RadixSpan
-        {
-            public int Left;
-            public int Right;
-            public int Radix;
-        }
-
         private void CopyLeft(int srcIndex)
         {
             _copyCount++;

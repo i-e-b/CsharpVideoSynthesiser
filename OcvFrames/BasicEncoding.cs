@@ -121,12 +121,30 @@ namespace OcvFrames
         {
             const string path = "radix_merge_sort.mp4";
             
+            const int width = 640;//1920;
+            const int height = 448;//1080;
+            const int fps = 60;
+            
+            using var subject = new VideoFileSynthesiser(path, width, height, fps);
+            subject.WriteVideo(new RadixMergeMovieGen(width, height, "scatter reverse", DataSets.ScatterReverse(128)));
+
+            Assert.That(File.Exists(path), "file was not written");
+        }
+        
+
+        [Test]
+        public void radix_in_place_sort_video()
+        {
+            const string path = "radix_in_place_sort.mp4";
+            
             const int width = 1920;//640;//1920;
             const int height = 1080;//448;//1080;
             const int fps = 60;
             
+            // This does more inspections than the merge, but *can* end up with far fewer copies,
+            // and only requires log2(n) aux space
             using var subject = new VideoFileSynthesiser(path, width, height, fps);
-            subject.WriteVideo(new RadixMergeMovieGen(width, height, "random", DataSets.Random(1024)));
+            subject.WriteVideo(new InPlaceMsdRadixMovieGen(width, height, "random", DataSets.Random(1024)));
 
             Assert.That(File.Exists(path), "file was not written");
         }
