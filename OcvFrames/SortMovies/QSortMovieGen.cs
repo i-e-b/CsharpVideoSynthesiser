@@ -175,20 +175,6 @@ namespace OcvFrames.SortMovies
             }
         }
 
-        private void Swp(ref int v1, ref int v2)
-        {
-            var tmp = v1;
-            v1 = v2;
-            v2 = tmp;
-        }
-        
-        private void Swp(ref byte v1, ref byte v2)
-        {
-            var tmp = v1;
-            v1 = v2;
-            v2 = tmp;
-        }
-
         private void Swap(int t, int x)
         {
             _copyCount += 3;

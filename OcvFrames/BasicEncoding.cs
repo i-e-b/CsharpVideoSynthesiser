@@ -159,7 +159,7 @@ namespace OcvFrames
             const int fps = 60;
             
             using var subject = new VideoFileSynthesiser(path, width, height, fps);
-            subject.WriteVideo(new TournamentSortMovieGen(width, height, "random", DataSets.Random(32)));
+            subject.WriteVideo(new TournamentSortMovieGen(width, height, "random", DataSets.Random(128)));
 
             Assert.That(File.Exists(path), "file was not written");
         }
