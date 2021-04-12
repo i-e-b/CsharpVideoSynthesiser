@@ -5,7 +5,7 @@ using System.Drawing.Drawing2D;
 
 namespace OcvFrames.SortMovies
 {
-    public class TournamentSortMovieGen : IVideoGenerator, IDisposable
+    public class TournamentMergeSortMovieGen : IVideoGenerator, IDisposable
     {
         private readonly Font _font;
         private readonly Font _fontSmall;
@@ -31,14 +31,17 @@ namespace OcvFrames.SortMovies
         private int _mergeMiddle, _mergeLeft, _mergeRight;
         
         private string _phase = "starting";
+        private readonly byte[] _mergeTemp;
+        private int _mergeTarget;
 
-        public TournamentSortMovieGen(int width, int height, string name, byte[] data)
+        public TournamentMergeSortMovieGen(int width, int height, string name, byte[] data)
         {
             _width = width;
             _height = height;
             _name = name;
             _itemCount = data.Length;
             _data = data;
+            _mergeTemp = new byte[data.Length];
             _font = new Font("Dave", 24);
             _fontSmall = new Font("Dave", 18);
             _fontTiny = new Font("Dave", 9);
@@ -54,7 +57,7 @@ namespace OcvFrames.SortMovies
 
         public bool DrawFrame(int frameNumber, Graphics g)
         {
-            if (frameNumber > 1000) return false; // reduce for testing
+            //if (frameNumber > 6000) return false; // reduce for testing
 
             var mid = _height * 0.5f;
             var xs = _width / (_itemCount + 1.0f);
@@ -69,8 +72,10 @@ namespace OcvFrames.SortMovies
             // indicators
             g.FillRectangle(Brushes.Cyan, _left*xs, 0, 4, mid); // cursor left
             g.FillRectangle(Brushes.LightGreen, _right*xs, 0, 4, mid); // cursor right
+            
             g.FillRectangle(Brushes.Red, _mergeMiddle*xs, 0, 4, mid); // merge point
-            g.FillRectangle(Brushes.Gold, _mergeLeft*xs, 0, 4, mid);
+            g.FillRectangle(Brushes.Red, _mergeTarget*xs, mid, 4, mid); // merge target
+            g.FillRectangle(Brushes.Gold, _mergeLeft*xs, 0, 4, mid); // merge sources
             g.FillRectangle(Brushes.Gold, _mergeRight*xs, 0, 4, mid);
             
             // draw heap
@@ -80,22 +85,27 @@ namespace OcvFrames.SortMovies
 
 
             // draw data points
-            var mx = 0.0;
-            var ys = mid / 300.0f; //255.0f;
+            var ys = mid / 280.0f;
             for (int i = 0; i < _itemCount; i++)
             {
                 var a = mid - (_data[i] * ys);
                 var x = i * xs;
-                mx = Math.Max(x, mx);
-
                 g.FillRectangle(Brushes.White, x - 2, a - 2, 4, 4);
+            }
+            
+            // draw merge data points
+            for (int i = 0; i < _itemCount; i++)
+            {
+                var a = _height - (_mergeTemp[i] * ys);
+                var x = i * xs;
+                g.FillRectangle(Brushes.OldLace, x - 2, a - 2, 4, 4);
             }
 
             // Title
-            g.DrawString($"Tournament sort. {_itemCount} items ({_name})", _font, Brushes.WhiteSmoke, 10, 24);
+            g.DrawString($"Tournament sort with merge. {_itemCount} items ({_name})", _font, Brushes.WhiteSmoke, 10, 24);
             g.DrawString($"{_compareCount} compares, {_copyCount} copies, {_swapCount} swaps", _fontSmall, Brushes.WhiteSmoke, 10, 70);
             g.DrawString($"{_steps} iterations ({_phase}).", _fontSmall, Brushes.WhiteSmoke, 10, 90);
-            g.DrawString($"n = {_itemCount}; O(n log n) = {_estComplex}, 'k' auxiliary space", _fontSmall, Brushes.WhiteSmoke, 10, 110);
+            g.DrawString($"n = {_itemCount}; O(n log n) = {_estComplex}, 'k+n' auxiliary space", _fontSmall, Brushes.WhiteSmoke, 10, 110);
 
 
             try
@@ -139,6 +149,7 @@ namespace OcvFrames.SortMovies
             {
                 // PREPHASE //
                 _phase = "pre-phase: fill";
+                
                 // First, fill the entire heap from the incoming array
                 int i;
                 for (i = 0; i <= B4; i++)
@@ -147,25 +158,38 @@ namespace OcvFrames.SortMovies
                     yield return _steps++;
                 }
 
+                UnlockHeap();
                 _phase = "pre-phase: order";
                 // Now, enforce the heap property on our heap
-                // TODO: make this as efficient as possible!
-                for (int j = 0; j < 2; j++)
-                {
-                    Order(B1, M1, A0);
-                    yield return _steps++;
-                    Order(B2, M1, A0);
-                    yield return _steps++;
-                    Order(B3, M2, A0);
-                    yield return _steps++;
-                    Order(B4, M2, A0);
-                    yield return _steps++;
+                // TODO: Combine sort and insert to a proper heap.
+                
+                if (Heap_LeftIsLess(B1, M1)) { SwapHeap(B1, M1); }
+                if (Heap_LeftIsLess(B2, M1)) { SwapHeap(B2, M1); }
+                if (Heap_LeftIsLess(B3, M2)) { SwapHeap(B3, M2); }
+                if (Heap_LeftIsLess(B4, M2)) { SwapHeap(B4, M2); }
+                
+                if (Heap_LeftIsLess(M1, A0)) {
+                    SwapHeap(M1, A0);
+                    if (Heap_LeftIsLess(B1, M1)) { SwapHeap(B1, M1); }
+                    if (Heap_LeftIsLess(B2, M1)) { SwapHeap(B2, M1); }
                 }
-
+                
+                if (Heap_LeftIsLess(M2, A0)) {
+                    SwapHeap(M2, A0);
+                    if (Heap_LeftIsLess(B3, M2)) { SwapHeap(B3, M2); }
+                    if (Heap_LeftIsLess(B4, M2)) { SwapHeap(B4, M2); }
+                }
+                    
+                yield return _steps++;
+                // Double check that the sort has worked.
+                // This is not part of the algorithm
+                CheckHeapOrder();
+                                                
                 // MAIN PHASE //
                 _phase = "main-phase";
                 yield return _steps;
-                // Now, merge up and feed data in
+                
+                // Now, pop from the heap, bubble up and feed data into the bottom of the heap.
                 while (true)
                 {
                     // heap up, bubbling items onto the main array
@@ -211,7 +235,7 @@ namespace OcvFrames.SortMovies
                 {
                     _phase = "merge phase";
                     yield return _steps;
-                    
+
                     // 2 spans to merge: (0 .. _mergeMiddle) and (_mergeMiddle .. _left)
                     _mergeLeft = 0;
                     _mergeRight = _mergeMiddle + 1;
@@ -226,30 +250,59 @@ namespace OcvFrames.SortMovies
                         yield break;
                     }
 
-                    // TODO: Find a more efficient merge strategy
+                    // Read smallest from the two partial results, write across to mergeTemp
+                    _mergeTarget = 0;
+                    while (_mergeLeft <= _mergeMiddle && _mergeRight <= end)
+                    {
+                        if (Data_LeftIsLess(_mergeLeft, _mergeRight))
+                        {
+                            _mergeTemp[_mergeTarget++] = _data[_mergeLeft];
+                            _data[_mergeLeft] = 0; // not required, just makes the visuals clearer
+                            _mergeLeft++;
+                            _copyCount++;
+                        }
+                        else
+                        {
+                            _mergeTemp[_mergeTarget++] = _data[_mergeRight];
+                            _data[_mergeRight] = 0; // not required, just makes the visuals clearer
+                            _mergeRight++;
+                            _copyCount++;
+                        }
+                        yield return _steps++;
+                    }
+                    // clean up left-overs
                     while (_mergeLeft <= _mergeMiddle)
                     {
-                        while (_mergeLeft <= _mergeMiddle && Data_LeftIsLess(_mergeLeft, _mergeRight)) { _mergeLeft++; yield return _steps++; }
-
-                        if (_mergeLeft < _mergeRight)
-                        {
-                            DataSwap(_mergeLeft, _mergeRight); yield return _steps++; // swap between left and right spans
-                            _mergeLeft++; 
-                            while (_mergeRight < end && !Data_LeftIsLess(_mergeRight, _mergeRight+1)) // bubble new value up
-                            {
-                                DataSwap(_mergeRight, _mergeRight+1);
-                                _mergeRight++;
-                                yield return _steps++;
-                            }
-                            _mergeRight = _mergeMiddle+1; // reset merge edge
-                            yield return _steps;
-                        }
+                        _mergeTemp[_mergeTarget++] = _data[_mergeLeft];
+                        _data[_mergeLeft] = 0; // not required, just makes the visuals clearer
+                        _mergeLeft++;
+                        _copyCount++;
+                        yield return _steps++;
+                    }
+                    while (_mergeRight <= end)
+                    {
+                        _mergeTemp[_mergeTarget++] = _data[_mergeRight];
+                        _data[_mergeRight] = 0; // not required, just makes the visuals clearer
+                        _mergeRight++;
+                        _copyCount++;
+                        yield return _steps++;
                     }
                     
                     // reset for next tournament
                     _mergeMiddle = _left - 1;
                     _mergeLeft = _mergeRight = -1;
                     lastWritten = -1;
+                    
+                    // Copy merge temp back
+                    for (int j = 0; j <= end; j++)
+                    {
+                        _mergeTarget = j;
+                        _data[j] = _mergeTemp[j];
+                        _mergeTemp[j] = 0;
+                        _copyCount++;
+                        yield return _steps++;
+                    }
+                    
                     UnlockHeap();
                     yield return _steps++;
                 }
@@ -263,6 +316,22 @@ namespace OcvFrames.SortMovies
                     // and loop again
                 }
             }
+        }
+
+        private void CheckHeapOrder()
+        {
+            var err = new Exception($"Heap is out of order: {Hs(A0)} / {Hs(M1)} {Hs(M2)} / {Hs(B1)} {Hs(B2)} {Hs(B3)} {Hs(B4)}");
+            static int Map(HeapSlot hs) => hs.Occupied ? hs.Value : int.MaxValue;
+            int ValueAt(int idx) => Map(_heap[idx]);
+
+            if (ValueAt(A0) > ValueAt(M1)) throw err;
+            if (ValueAt(A0) > ValueAt(M2)) throw err;
+            
+            if (ValueAt(M1) > ValueAt(B1)) throw err;
+            if (ValueAt(M1) > ValueAt(B2)) throw err;
+            
+            if (ValueAt(M2) > ValueAt(B3)) throw err;
+            if (ValueAt(M2) > ValueAt(B4)) throw err;
         }
 
         private void UnlockHeap()
@@ -298,12 +367,13 @@ namespace OcvFrames.SortMovies
 
         /// <summary>
         /// Rearrange slots 1,2,3 so that slot 3 has the lowest value and slot 1 the highest.
-        /// No values are removed
+        /// No values are removed.
+        /// Returns true if any swaps are made.
         /// </summary>
         private void Order(int high, int mid, int low)
         {
-            if (IsUnlocked(high) && Heap_LeftIsLess(high, mid)) SwapHeap(mid, high);
-            if (Heap_LeftIsLess(mid, low)) SwapHeap(low, mid);
+            if (IsUnlocked(high) && Heap_LeftIsLess(high, mid)) { SwapHeap(mid, high); }
+            if (Heap_LeftIsLess(mid, low)) { SwapHeap(low, mid); }
         }
 
         private bool IsUnlocked(int slot)
@@ -318,16 +388,6 @@ namespace OcvFrames.SortMovies
             var tmp = _heap[slot1];
             _heap[slot1] = _heap[slot2];
             _heap[slot2] = tmp;
-        }
-        
-
-        private void DataSwap(int leftIndex, int rightIndex)
-        {
-            _copyCount+=3;
-            _swapCount++;
-            var tmp = _data[leftIndex];
-            _data[leftIndex] = _data[rightIndex];
-            _data[rightIndex] = tmp;
         }
 
         private bool Occupied(int slot)
@@ -376,9 +436,10 @@ namespace OcvFrames.SortMovies
         /// </summary>
         private bool Heap_LeftIsLess(int left, int right)
         {
+            static int Map(HeapSlot hs) => hs.Occupied ? hs.Value : int.MaxValue;
+            
             _compareCount++;
-            if (!_heap[left].Occupied) return false; // 'empty' is the highest value
-            return _heap[left].Value <= _heap[right].Value;
+            return Map(_heap[left]) < Map(_heap[right]);
         }
         
         /// <summary>
