@@ -1,4 +1,4 @@
-﻿namespace OcvFrames
+﻿namespace OcvFrames.Helpers
 {
     internal class IdxSpan
     {

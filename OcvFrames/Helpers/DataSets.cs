@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace OcvFrames
+namespace OcvFrames.Helpers
 {
     public static class DataSets
     {

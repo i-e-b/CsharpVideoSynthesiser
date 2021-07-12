@@ -1,0 +1,139 @@
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+
+namespace OcvFrames.RotateAndShuffle
+{
+    // ReSharper disable once InconsistentNaming
+    /// <summary>
+    /// Rotate an array by an arbitrary amount in place.
+    /// Works by reversing each side of the rotation point separately,
+    /// then reversing the entire array.
+    /// This is simple and reasonably fast. It is outperformed by the
+    /// 'trinity' rotation, which elides some of the inversions here.
+    /// </summary>
+    public class ArrayRotate_3Reversals : IVideoGenerator
+    {
+        private readonly int _rotatePlaces;
+        private readonly int[] _data;
+        private readonly IEnumerator<int> _iterator;
+        private readonly int _itemCount;
+        
+        private readonly int _width;
+        private readonly int _height;
+        
+        private readonly Font _font;
+        private readonly Font _fontSmall;
+        private int _copyCount;
+        private int _swapCount;
+        private int _steps;
+        private int _centre;
+        private int _left;
+        private int _right;
+        private int _maxValue;
+
+        public ArrayRotate_3Reversals(int width, int height, int length, int rotatePlaces)
+        {
+            _width = width;
+            _height = height;
+            _itemCount = length;
+            _rotatePlaces = rotatePlaces;
+            _data = new int[length];
+            _maxValue = length;
+            
+            for (int i = 0; i < length; i++)
+            {
+                _data[i] = i + 1;
+            }
+            
+            _font = new Font("Dave", 24);
+            _fontSmall = new Font("Dave", 18);
+            
+            _iterator = ReversalArrayRotation().GetEnumerator();
+        }
+        
+        public bool DrawFrame(int frameNumber, Graphics g)
+        {
+            var xs = _width / (_itemCount+1.0f);
+            var ys = _height / _maxValue;
+            
+            g.CompositingQuality = CompositingQuality.HighQuality;
+            g.SmoothingMode = SmoothingMode.HighQuality;
+            g.Clear(Color.Black);
+            
+            // Title
+            g.DrawString($"Rotate array with 3 reversals. {_itemCount} items by {_rotatePlaces} places", _font, Brushes.WhiteSmoke, 10, 24);
+            g.DrawString($"{_copyCount} copies, {_swapCount} swaps, {_steps} iterations.", _fontSmall, Brushes.WhiteSmoke, 10, 66);
+            g.DrawString($"n = {_itemCount}; O(n) = {_itemCount}, 0 auxiliary space", _fontSmall, Brushes.WhiteSmoke, 10, 84);
+            
+            // indicators
+            var w = Math.Max(4, xs);
+            g.FillRectangle(Brushes.Red, (_left-1)*xs, 0, w, _height);
+            g.FillRectangle(Brushes.Fuchsia, (_right+1)*xs, 0, w, _height);
+            g.FillRectangle(Brushes.Blue, _centre*xs, 0, w, _height);
+            g.FillRectangle(Brushes.DarkCyan, _rotatePlaces*xs, 0, w, _height);
+
+            for (int i = 0; i < _itemCount; i++)
+            {
+                var top = _height - (_data[i] * ys);
+                var height = _height - top;
+                var width = Math.Max(1, (xs < 3) ? xs : xs-2);
+                var x = i*xs;
+                
+                g.FillRectangle(Brushes.White, x, top, width, height);
+            }
+            
+            return _iterator.MoveNext();
+        }
+
+        IEnumerable<int> ReversalArrayRotation()
+        {
+            if (_itemCount < 2) yield break;
+            
+            _centre = (_itemCount) - (_rotatePlaces % _itemCount); // the start-point is a mirror image
+            if (_centre == 0 || _centre == _itemCount-1) yield break; // no-op
+            
+            // Reverse left side
+            _left = 0;
+            _right = _centre - 1;
+            for (; _left < _right; _left++, _right--)
+            {
+                Swap(_left,_right);
+                yield return _steps++;
+            }
+            
+            // Reverse right side
+            _left = _centre;
+            _right = _itemCount - 1;
+            for (; _left < _right; _left++, _right--)
+            {
+                Swap(_left,_right);
+                yield return _steps++;
+            }
+            
+            // Reverse entire array
+            _left = 0;
+            _right = _itemCount - 1;
+            for (; _left < _right; _left++, _right--)
+            {
+                Swap(_left,_right);
+                yield return _steps++;
+            }
+            
+            // Done!
+            yield return _steps;
+            yield return _steps;
+        }
+
+        private void Swap(int leftIdx, int rightIdx)
+        {
+            _copyCount+=3;
+            _swapCount++;
+            
+            var t = _data[leftIdx];
+            _data[leftIdx] = _data[rightIdx];
+            _data[rightIdx] = t;
+        }
+    }
+}

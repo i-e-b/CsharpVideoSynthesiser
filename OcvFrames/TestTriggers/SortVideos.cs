@@ -1,27 +1,13 @@
 ﻿using System.IO;
 using NUnit.Framework;
+using OcvFrames.Helpers;
 using OcvFrames.SortMovies;
 
-namespace OcvFrames
+namespace OcvFrames.TestTriggers
 {
     [TestFixture]
-    public class BasicEncoding
+    public class SortVideos
     {
-        [Test]
-        public void create_a_basic_movie_file()
-        {
-            const string path = "video_out.mp4";
-            
-            const int width = 800;
-            const int height = 450;
-            const int fps = 60;
-            
-            using var subject = new VideoFileSynthesiser(path, width, height, fps);
-            subject.WriteVideo(new SimpleTestGen());
-
-            Assert.That(File.Exists(path), "file was not written");
-        }
-
         [Test]
         public void merge_sort_video()
         {
@@ -54,7 +40,7 @@ namespace OcvFrames
         }
         
         [Test]
-        public void quick_sort_with_prephase_video()
+        public void quick_sort_with_pre_phase_video()
         {
             // This sort is pretty bad.
             const string path = "prephase_recursive_quicksort.mp4";
@@ -69,7 +55,6 @@ namespace OcvFrames
             Assert.That(File.Exists(path), "file was not written");
         }
 
-        
         [Test]
         public void heap_sort_video()
         {
