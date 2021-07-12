@@ -13,7 +13,7 @@ namespace OcvFrames.RotateAndShuffle
     /// This is simple and reasonably fast. It is outperformed by the
     /// 'trinity' rotation, which elides some of the inversions here.
     /// </summary>
-    public class ArrayRotate_3Reversals : IVideoGenerator
+    public class ArrayRotate_Trinity : IVideoGenerator
     {
         private readonly int _rotatePlaces;
         private readonly int[] _data;
@@ -29,11 +29,13 @@ namespace OcvFrames.RotateAndShuffle
         private int _swapCount;
         private int _steps;
         private int _centre;
-        private int _left;
-        private int _right;
+        private int _pointA;
+        private int _pointB;
+        private int _pointC;
+        private int _pointD;
         private readonly int _maxValue;
 
-        public ArrayRotate_3Reversals(int width, int height, int length, int rotatePlaces)
+        public ArrayRotate_Trinity(int width, int height, int length, int rotatePlaces)
         {
             _width = width;
             _height = height;
@@ -50,13 +52,13 @@ namespace OcvFrames.RotateAndShuffle
             _font = new Font("Dave", 24);
             _fontSmall = new Font("Dave", 18);
             
-            _iterator = ReversalArrayRotation().GetEnumerator();
+            _iterator = TrinityArrayRotation().GetEnumerator();
         }
         
         public bool DrawFrame(int frameNumber, Graphics g)
         {
             var xs = _width / (_itemCount+1.0f);
-            var ys = _height / _maxValue;
+            var ys = _height / (_maxValue+5.0f);
             
             g.CompositingQuality = CompositingQuality.HighQuality;
             g.SmoothingMode = SmoothingMode.HighQuality;
@@ -69,16 +71,19 @@ namespace OcvFrames.RotateAndShuffle
             
             // indicators
             var w = Math.Max(4, xs);
-            g.FillRectangle(Brushes.Red, (_left-1)*xs, 0, w, _height);
-            g.FillRectangle(Brushes.Fuchsia, (_right+1)*xs, 0, w, _height);
+            g.FillRectangle(Brushes.Red, (_pointA-1)*xs, 0, w, _height);
+            g.FillRectangle(Brushes.Fuchsia, (_pointB+1)*xs, 0, w, _height);
+            g.FillRectangle(Brushes.Orange, (_pointC-1)*xs, 0, w, _height);
+            g.FillRectangle(Brushes.Plum, (_pointD+1)*xs, 0, w, _height);
+            
             g.FillRectangle(Brushes.Blue, _centre*xs, 0, w, _height);
-            g.FillRectangle(Brushes.DarkCyan, _rotatePlaces*xs, 0, w, _height);
+            g.FillRectangle(Brushes.DarkCyan, (_itemCount - _rotatePlaces)*xs, 0, w, _height); // ccw rotation shown
 
             for (int i = 0; i < _itemCount; i++)
             {
                 var top = _height - (_data[i] * ys);
                 var height = _height - top;
-                var width = Math.Max(1, (xs < 3) ? xs : xs-2);
+                var width = Math.Max(2, (xs < 3) ? xs : xs-2);
                 var x = i*xs;
                 
                 g.FillRectangle(Brushes.White, x, top, width, height);
@@ -87,53 +92,84 @@ namespace OcvFrames.RotateAndShuffle
             return _iterator.MoveNext();
         }
 
-        IEnumerable<int> ReversalArrayRotation()
+        IEnumerable<int> TrinityArrayRotation()
         {
             if (_itemCount < 2) yield break;
             
-            _centre = (_itemCount) - (_rotatePlaces % _itemCount); // the start-point is a mirror image
+            _centre = _rotatePlaces % _itemCount;
             if (_centre == 0 || _centre == _itemCount-1) yield break; // no-op
             
-            // Reverse left side
-            _left = 0;
-            _right = _centre - 1;
-            for (; _left < _right; _left++, _right--)
+            var left = _centre - 1; // length of left sub-array
+            var right = _itemCount - _centre; // length of right sub-array
+
+            _pointA = 0;
+            _pointB = _pointA + left;
+            _pointC = _pointB;
+            _pointD = _pointC + right;
+
+            int swap;
+            var loop = left / 2;
+
+            // reversals with overlaps
+            while (loop-- > 0)
             {
-                Swap(_left,_right);
+                _pointB--;
+                swap = _data[_pointB];
+                _data[_pointB] = _data[_pointA];
+                _data[_pointA] = _data[_pointC];
+                _pointA++;
+                
+                _copyCount+=3;
+                _swapCount++;
+                yield return _steps++;
+
+                _pointD--;
+                _data[_pointC] = _data[_pointD];
+                _data[_pointD] = swap;
+                _pointC++;
+                
+                _copyCount+=2;
+                _swapCount++;
                 yield return _steps++;
             }
-            
-            // Reverse right side
-            _left = _centre;
-            _right = _itemCount - 1;
-            for (; _left < _right; _left++, _right--)
+
+            loop = (_pointD - _pointC) / 2;
+
+            // one less overlap
+            while (loop-- > 0)
             {
-                Swap(_left,_right);
+                _pointD--;
+                swap = _data[_pointC];
+                _data[_pointC] = _data[_pointD];
+                _data[_pointD] = _data[_pointA];
+                _data[_pointA] = swap;
+                _pointA++;
+                _pointC++;
+                
+                _copyCount+=4;
+                _swapCount++;
                 yield return _steps++;
             }
-            
-            // Reverse entire array
-            _left = 0;
-            _right = _itemCount - 1;
-            for (; _left < _right; _left++, _right--)
+
+            loop = (_pointD - _pointA) / 2;
+
+            // last cycle
+            while (loop-- > 0)
             {
-                Swap(_left,_right);
+                _pointD--;
+                swap = _data[_pointA];
+                _data[_pointA] = _data[_pointD];
+                _data[_pointD] = swap;
+                _pointA++;
+                
+                _copyCount+=3;
+                _swapCount++;
                 yield return _steps++;
             }
-            
+
             // Done!
             yield return _steps;
             yield return _steps;
-        }
-
-        private void Swap(int leftIdx, int rightIdx)
-        {
-            _copyCount+=3;
-            _swapCount++;
-            
-            var t = _data[leftIdx];
-            _data[leftIdx] = _data[rightIdx];
-            _data[rightIdx] = t;
         }
     }
 }

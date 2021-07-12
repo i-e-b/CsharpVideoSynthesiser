@@ -21,5 +21,20 @@ namespace OcvFrames.TestTriggers
 
             Assert.That(File.Exists(path), "file was not written");
         }
+        
+        [Test]
+        public void Trinity_array_rotation()
+        {
+            const string path = "trinity_array_rotate_video_out.mp4";
+
+            const int width = 1920;//640;//1920;
+            const int height = 1080;//448;//1080;
+            const int fps = 60;
+
+            using var subject = new VideoFileSynthesiser(path, width, height, fps);
+            subject.WriteVideo(new ArrayRotate_Trinity(width, height, length:1024, rotatePlaces:256));
+
+            Assert.That(File.Exists(path), "file was not written");
+        }
     }
 }
