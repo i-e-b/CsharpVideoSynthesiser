@@ -100,7 +100,6 @@ namespace OcvFrames.TestTriggers
             Assert.That(File.Exists(path), "file was not written");
         }
 
-
         [Test]
         public void radix_merge_sort_video()
         {
@@ -115,7 +114,6 @@ namespace OcvFrames.TestTriggers
 
             Assert.That(File.Exists(path), "file was not written");
         }
-        
 
         [Test]
         public void radix_in_place_sort_video()

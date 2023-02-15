@@ -13,6 +13,7 @@ Uses OpenCV and FFMpeg, with the libraries:
 
 - https://www.nuget.org/packages/Emgu.CV -> https://github.com/emgucv/emgucv
 - https://www.nuget.org/packages/FFMpegCore/  -> https://github.com/rosenbjerg/FFMpegCore
+  - to install binaries, see https://github.com/rosenbjerg/FFMpegCore#installation 
 
 Generation of the videos is triggered by running its NUnit test
 
@@ -128,3 +129,10 @@ then reversing the entire array.
 
 This is simple and reasonably fast. It is outperformed by the
 'trinity' rotation, which elides some of the inversions here.
+
+## To Do
+
+- Audio versions
+- Shuffles
+- Searches
+- String algorithms
