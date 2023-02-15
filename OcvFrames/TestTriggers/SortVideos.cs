@@ -18,7 +18,7 @@ namespace OcvFrames.TestTriggers
             const int height = 448;//1080;
             const int fps = 60;
             
-            using var subject = new VideoFileSynthesiser(path, width, height, fps);
+            using var subject = new OcvVideoFileSynthesiser(path, width, height, fps);
             subject.WriteVideo(new MergeMovieGen(width, height, "scatter reverse", DataSets.ScatterReverse(512)));
 
             Assert.That(File.Exists(path), "file was not written");
@@ -33,7 +33,7 @@ namespace OcvFrames.TestTriggers
             const int height = 1080;//448;//1080;
             const int fps = 60;
             
-            using var subject = new VideoFileSynthesiser(path, width, height, fps);
+            using var subject = new OcvVideoFileSynthesiser(path, width, height, fps);
             subject.WriteVideo(new QSortMovieGen(width, height, "scatter reverse", DataSets.ScatterReverse(1024)));
 
             Assert.That(File.Exists(path), "file was not written");
@@ -49,7 +49,7 @@ namespace OcvFrames.TestTriggers
             const int height = 448;//1080;
             const int fps = 60;
             
-            using var subject = new VideoFileSynthesiser(path, width, height, fps);
+            using var subject = new OcvVideoFileSynthesiser(path, width, height, fps);
             subject.WriteVideo(new QSortPrephaseMovieGen(width, height,"scatter reverse", DataSets.ScatterReverse(512)));
 
             Assert.That(File.Exists(path), "file was not written");
@@ -64,7 +64,7 @@ namespace OcvFrames.TestTriggers
             const int height = 448;//1080;
             const int fps = 60;
             
-            using var subject = new VideoFileSynthesiser(path, width, height, fps);
+            using var subject = new OcvVideoFileSynthesiser(path, width, height, fps);
             subject.WriteVideo(new HeapMovieGen(width, height, "random", DataSets.Random(128)));
 
             Assert.That(File.Exists(path), "file was not written");
@@ -79,7 +79,7 @@ namespace OcvFrames.TestTriggers
             const int height = 1080;//448;//1080;
             const int fps = 60;
             
-            using var subject = new VideoFileSynthesiser(path, width, height, fps);
+            using var subject = new OcvVideoFileSynthesiser(path, width, height, fps);
             subject.WriteVideo(new OptimisedHeapMovieGen(width, height, "random", DataSets.Random(1024)));
 
             Assert.That(File.Exists(path), "file was not written");
@@ -94,7 +94,7 @@ namespace OcvFrames.TestTriggers
             const int height = 448;//1080;
             const int fps = 60;
             
-            using var subject = new VideoFileSynthesiser(path, width, height, fps);
+            using var subject = new OcvVideoFileSynthesiser(path, width, height, fps);
             subject.WriteVideo(new RepeatHeapMovieGen(width, height, "scatter reverse", DataSets.ScatterReverse(128)));
 
             Assert.That(File.Exists(path), "file was not written");
@@ -109,7 +109,7 @@ namespace OcvFrames.TestTriggers
             const int height = 448;//1080;
             const int fps = 60;
             
-            using var subject = new VideoFileSynthesiser(path, width, height, fps);
+            using var subject = new OcvVideoFileSynthesiser(path, width, height, fps);
             subject.WriteVideo(new RadixMergeMovieGen(width, height, "scatter reverse", DataSets.ScatterReverse(128)));
 
             Assert.That(File.Exists(path), "file was not written");
@@ -126,7 +126,7 @@ namespace OcvFrames.TestTriggers
             
             // This does more inspections than the merge, but *can* end up with far fewer copies,
             // and only requires log2(n) aux space
-            using var subject = new VideoFileSynthesiser(path, width, height, fps);
+            using var subject = new OcvVideoFileSynthesiser(path, width, height, fps);
             subject.WriteVideo(new InPlaceMsdRadixMovieGen(width, height, "random", DataSets.Random(1024)));
 
             Assert.That(File.Exists(path), "file was not written");
@@ -141,7 +141,7 @@ namespace OcvFrames.TestTriggers
             const int height = 1080;
             const int fps = 60;
             
-            using var subject = new VideoFileSynthesiser(path, width, height, fps);
+            using var subject = new OcvVideoFileSynthesiser(path, width, height, fps);
             subject.WriteVideo(new TournamentMergeSortMovieGen(width, height, "random", DataSets.Random(256)));
 
             Assert.That(File.Exists(path), "file was not written");

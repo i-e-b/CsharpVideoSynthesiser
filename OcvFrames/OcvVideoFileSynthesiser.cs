@@ -4,10 +4,15 @@ using System.Drawing.Imaging;
 using System.Linq;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
+using PixelFormat = System.Drawing.Imaging.PixelFormat;
 
 namespace OcvFrames
 {
-    public class VideoFileSynthesiser: IDisposable
+    /// <summary>
+    /// Write a sequence of frames to a video file.
+    /// Does not support audio
+    /// </summary>
+    public class OcvVideoFileSynthesiser: IDisposable
     {
         private readonly VideoWriter _writer;
         private readonly Mat _writerFrame;
@@ -15,7 +20,7 @@ namespace OcvFrames
 
         private const string ApiCode = "MSMF";
         
-        public VideoFileSynthesiser(string filePath, int width, int height, int framesPerSecond)
+        public OcvVideoFileSynthesiser(string filePath, int width, int height, int framesPerSecond)
         {
             var size = new Size(width, height);
             var compressionType = VideoWriter.Fourcc('H', '2', '6', '4');

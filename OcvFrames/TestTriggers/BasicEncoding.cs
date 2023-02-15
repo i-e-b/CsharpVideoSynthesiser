@@ -15,7 +15,7 @@ namespace OcvFrames.TestTriggers
             const int height = 450;
             const int fps = 60;
 
-            using var subject = new VideoFileSynthesiser(path, width, height, fps);
+            using var subject = new OcvVideoFileSynthesiser(path, width, height, fps);
             subject.WriteVideo(new SimpleTestGen());
 
             Assert.That(File.Exists(path), "file was not written");
