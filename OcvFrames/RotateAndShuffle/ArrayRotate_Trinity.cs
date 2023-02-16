@@ -92,13 +92,7 @@ namespace OcvFrames.RotateAndShuffle
             return _iterator.MoveNext();
         }
 
-
-        public bool GetAudioSamples(int videoFrameNumber, int audioFrameNumber, out byte[]? samples)
-        {
-            samples = null;
-            return false;
-        }
-
+        public IEnumerable<byte> GetAudioSamples() => Array.Empty<byte>();
 
         IEnumerable<int> TrinityArrayRotation()
         {

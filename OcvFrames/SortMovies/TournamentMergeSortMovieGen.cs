@@ -119,12 +119,7 @@ namespace OcvFrames.SortMovies
             }
         }
 
-        public bool GetAudioSamples(int videoFrameNumber, int audioFrameNumber, out byte[]? samples)
-        {
-            samples = null;
-            return false;
-        }
-
+        public IEnumerable<byte> GetAudioSamples() => Array.Empty<byte>();
 
         private string Hs(int index)
         {

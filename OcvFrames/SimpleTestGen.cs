@@ -1,7 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace OcvFrames
 {
@@ -10,6 +9,8 @@ namespace OcvFrames
         private readonly Font _font;
         private readonly Pen _pen;
         private readonly byte[] _sample;
+        private readonly List<byte> _audio;
+        private int _samplePosition;
 
         public SimpleTestGen()
         {
@@ -23,6 +24,9 @@ namespace OcvFrames
             {
                 _sample[i] = (byte)((Math.Sin(i * r) * 32.0) + 127.0);
             }
+            _samplePosition = 0;
+            
+            _audio = new List<byte>();
         }
         
         public bool DrawFrame(int videoFrameNumber, Graphics g)
@@ -34,41 +38,24 @@ namespace OcvFrames
             g.DrawString($"Frame {videoFrameNumber}", _font, Brushes.White, 10, 80);
             g.DrawString("Video output test █▓▒░   ▤▥▦▧▨▩", _font, Brushes.White, 10, 140);
             
+            var rate = 44100.0 / 60.0;
+            var expectedAudioSamples = (videoFrameNumber+1) * rate;
+            var moreSamples = ((int)expectedAudioSamples) - _audio.Count;
+
+            for (int i = 0; i < moreSamples; i++)
+            {
+                _audio.Add(_sample[_samplePosition++]);
+                if (_samplePosition >= _sample.Length) _samplePosition = 0;
+            }
+            
             return true;
         }
 
-        public bool GetAudioSamples(int videoFrameNumber, int audioFrameNumber, out byte[]? samples)
+        public IEnumerable<byte> GetAudioSamples()
         {
-            // This causes the output to lock up.
-            // sync test
-            //if (audioFrameNumber > (videoFrameNumber * 7))
-            //{
-            //    samples = Array.Empty<byte>();
-            //    return true;
-            //}
-            // end sync test
-            
-            //Console.Write('a');
-            //Thread.Sleep(5);
-            
-            if (audioFrameNumber > 440)
-            {
-                Console.WriteLine($"\r\nAudio ended at audio frame count. Video at {videoFrameNumber}");
-                samples = null;
-                return false;
-            }
-
-            if (videoFrameNumber > 60)
-            {
-                Console.WriteLine($"\r\nAudio ended at video frame count. Audio at {audioFrameNumber}");
-                samples = null;
-                return false;
-            }
-            
-            samples = _sample;
-            return true;
+            Console.WriteLine($"Total samples = {_audio.Count}");
+            return _audio;
         }
-
 
         public void Dispose()
         {

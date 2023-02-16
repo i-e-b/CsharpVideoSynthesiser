@@ -29,6 +29,10 @@ namespace OcvFrames.SortMovies
         private int _left;
         private int _right;
         private int _radix;
+        
+        // audio
+        private readonly List<byte> _audio;
+        private int _samplePosition;
 
         public InPlaceMsdRadixMovieGen(int width, int height, string name, byte[] data)
         {
@@ -40,6 +44,9 @@ namespace OcvFrames.SortMovies
             _font = new Font("Dave", 24);
             _fontSmall = new Font("Dave", 18);
 
+            _audio = new List<byte>();
+            _samplePosition = 0;
+            
             _estComplex = (int) (8 * _itemCount); // 8 bit keys
 
             _steps = 0;
@@ -92,7 +99,17 @@ namespace OcvFrames.SortMovies
             g.DrawString($"{_steps} iterations, stack depth {_stack.Count}, span {_activeSpanWidth} elements.", _fontSmall, Brushes.WhiteSmoke, 10, 90);
             g.DrawString($"n = {_itemCount}; O(kn) = {_estComplex}, O(log n) auxiliary space", _fontSmall, Brushes.WhiteSmoke, 10, 110);
 
-
+            // output audio: just output the data as a waveform
+            var audioSamplesPerFrame = 44100.0 / 60.0;
+            var expectedAudioSamples = (videoFrameNumber+1) * audioSamplesPerFrame;
+            var moreSamples = ((int)expectedAudioSamples) - _audio.Count;
+            
+            for (int i = 0; i < moreSamples; i++)
+            {
+                _audio.Add(_data[_samplePosition++]);
+                if (_samplePosition >= _data.Length - 1) _samplePosition = 1;
+            }
+            
             try
             {
                 return _iterator.MoveNext();
@@ -104,14 +121,13 @@ namespace OcvFrames.SortMovies
             }
         }
         
-
-        public bool GetAudioSamples(int videoFrameNumber, int audioFrameNumber, out byte[]? samples)
+        public IEnumerable<byte> GetAudioSamples()
         {
-            samples = null;
-            return false;
+            // Could do some filtering here?
+            Console.WriteLine($"Total samples = {_audio.Count}");
+            return _audio;
         }
-
-
+        
         IEnumerable<int> InPlaceRadixSort()
         {
             var len = _itemCount;
@@ -143,7 +159,7 @@ namespace OcvFrames.SortMovies
                 // recurse
                 if (_radix > 0)
                 {
-                    Console.WriteLine($"R{_radix}, {span.Left}[{_left}|{_right}]{span.Right}");
+                    //Console.WriteLine($"R{_radix}, {span.Left}[{_left}|{_right}]{span.Right}");
                     _stack.Push(new RadixSpan {Left = _right, Right = span.Right, Radix = _radix - 1}); // right side - leave this out to get minimal element only
                     _stack.Push(new RadixSpan {Left = span.Left, Right = _right - 1, Radix = _radix - 1}); // left side
                 }

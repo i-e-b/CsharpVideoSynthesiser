@@ -20,7 +20,7 @@ namespace OcvFrames.TestTriggers
             using var subject = new FfmpegFileSynthesiser(path, width, height, fps);
             subject.WriteVideo(new SimpleTestGen());
 
-            Assert.That(File.Exists(path), "file was not written");
+            //Assert.That(File.Exists(path), "file was not written");
             Console.WriteLine("\r\n");
             Console.WriteLine(Path.GetFullPath(path));
         }

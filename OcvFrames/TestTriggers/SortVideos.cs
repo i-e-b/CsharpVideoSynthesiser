@@ -17,9 +17,10 @@ namespace OcvFrames.TestTriggers
             const int width = 640;//1920;
             const int height = 448;//1080;
             const int fps = 60;
+            const int dataSize = 735; // audio samples per frame: 44'100 / 60.
             
-            using var subject = new OcvVideoFileSynthesiser(path, width, height, fps);
-            subject.WriteVideo(new MergeMovieGen(width, height, "scatter reverse", DataSets.ScatterReverse(512)));
+            using var subject = new FfmpegFileSynthesiser(path, width, height, fps);
+            subject.WriteVideo(new MergeMovieGen(width, height, "scatter reverse", DataSets.ScatterReverse(dataSize)));
 
             Assert.That(File.Exists(path), "file was not written");
         }
@@ -120,14 +121,16 @@ namespace OcvFrames.TestTriggers
         {
             const string path = "radix_in_place_sort.mp4";
             
-            const int width = 1920;//640;//1920;
-            const int height = 1080;//448;//1080;
+            const int width = 1280;//640;//1920;
+            const int height = 720;//448;//1080;
             const int fps = 60;
+            const int dataSize = 735; // audio samples per frame: 44'100 / 60.
             
             // This does more inspections than the merge, but *can* end up with far fewer copies,
             // and only requires log2(n) aux space
-            using var subject = new OcvVideoFileSynthesiser(path, width, height, fps);
-            subject.WriteVideo(new InPlaceMsdRadixMovieGen(width, height, "random", DataSets.Random(1024)));
+            //using var subject = new OcvVideoFileSynthesiser(path, width, height, fps);
+            using var subject = new FfmpegFileSynthesiser(path, width, height, fps);
+            subject.WriteVideo(new InPlaceMsdRadixMovieGen(width, height, "random", DataSets.Random(dataSize)));
 
             Assert.That(File.Exists(path), "file was not written");
         }

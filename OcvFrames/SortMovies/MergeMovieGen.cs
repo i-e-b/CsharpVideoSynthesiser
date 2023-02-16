@@ -26,6 +26,10 @@ namespace OcvFrames.SortMovies
         private int _copyCount;
         private int _swapCount;
         private string _name;
+        
+        // audio
+        private readonly List<byte> _audio;
+        private int _samplePosition;
 
         public MergeMovieGen(int width, int height, string name, byte[] data)
         {
@@ -38,7 +42,9 @@ namespace OcvFrames.SortMovies
             
             _font = new Font("Dave", 24);
             _fontSmall = new Font("Dave", 18);
-            
+
+            _audio = new List<byte>();
+            _samplePosition = 0;
             
             _estComplex = (int)(Math.Log2(_itemCount) * _itemCount);
             
@@ -81,17 +87,23 @@ namespace OcvFrames.SortMovies
                 g.FillRectangle(Brushes.White, x - 2, a - 2, 4, 4);
                 g.FillRectangle(Brushes.White, x - 2, b - 2, 4, 4);
             }
+            
+            // output audio: just output the data as a waveform
+            var audioSamplesPerFrame = 44100.0 / 60.0;
+            var expectedAudioSamples = (videoFrameNumber+1) * audioSamplesPerFrame;
+            var moreSamples = ((int)expectedAudioSamples) - _audio.Count;
+            
+            for (int i = 0; i < moreSamples; i++)
+            {
+                var x = _aIsSource ? _b : _a;
+                _audio.Add(x[_samplePosition++]);
+                if (_samplePosition >= x.Length - 1) _samplePosition = 1;
+            }
 
             return _iterator.MoveNext();
         }
         
-
-        public bool GetAudioSamples(int videoFrameNumber, int audioFrameNumber, out byte[]? samples)
-        {
-            samples = null;
-            return false;
-        }
-
+        public IEnumerable<byte> GetAudioSamples() => _audio;
 
         public byte[] Source => _aIsSource ? _a : _b;
         public byte[] Dest => _aIsSource ? _b : _a;

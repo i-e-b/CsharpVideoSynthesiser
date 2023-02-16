@@ -1,4 +1,5 @@
-﻿using System.Drawing;
+﻿using System.Collections.Generic;
+using System.Drawing;
 
 namespace OcvFrames
 {
@@ -12,9 +13,9 @@ namespace OcvFrames
 
         /// <summary>
         /// Supply waiting audio frames.
-        /// Return 'true' if more frames to come, 'false' if end of video.
+        /// Audio is read after video is created.
         /// If 'samples' is returned null, the audio stream will stop
         /// </summary>
-        bool GetAudioSamples(int videoFrameNumber, int audioFrameNumber, out byte[]? samples);
+        IEnumerable<byte> GetAudioSamples();
     }
 }

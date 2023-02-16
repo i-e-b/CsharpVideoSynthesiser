@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
-using System.Threading.Tasks;
+using System.Linq;
 using FFMpegCore;
 using FFMpegCore.Enums;
 using FFMpegCore.Extend;
@@ -19,8 +19,6 @@ namespace OcvFrames;
 /// </summary>
 public class FfmpegFileSynthesiser : IDisposable
 {
-    private readonly int _width;
-    private readonly int _height;
     private readonly int _framesPerSecond;
     private readonly string _outputPath;
     private IVideoGenerator? _source;
@@ -33,8 +31,6 @@ public class FfmpegFileSynthesiser : IDisposable
 
     public FfmpegFileSynthesiser(string filePath, int width, int height, int framesPerSecond)
     {
-        _width = width;
-        _height = height;
         _framesPerSecond = framesPerSecond;
         _outputPath = Path.GetFullPath(filePath);
         _frameImage = new Bitmap(width, height, PixelFormat.Format24bppRgb);
@@ -52,25 +48,14 @@ public class FfmpegFileSynthesiser : IDisposable
         {
             more = _source.DrawFrame(_videoFrameNumber++, g);
             var wrapper = new BitmapVideoFrameWrapper(_frameImage); // we do NOT dispose of this frame, as that kills the source bitmap and nothing else
-            Console.Write('?');
             yield return wrapper;
         }
     }
 
     private IEnumerable<IAudioSample> CreateAudioFrames()
     {
-        if (_source is null) yield break;
-        
-        var more = true;
-        var i = 0;
-        while (more)
-        {
-            more = _source.GetAudioSamples(_videoFrameNumber, i++, out var buffer);
-            if (buffer is null) yield break;
-            
-            yield return new PcmAudioSampleWrapper(buffer);
-            //Console.Write('a');
-        }
+        if (_source is null) return Array.Empty<IAudioSample>();
+        return _source.GetAudioSamples().Chunk(44100).Select(buf => new PcmAudioSampleWrapper(buf));
     }
 
     public void WriteVideo(IVideoGenerator source)
@@ -81,22 +66,37 @@ public class FfmpegFileSynthesiser : IDisposable
             FrameRate = _framesPerSecond
         };
 
+        var tempName = Path.GetDirectoryName(_outputPath)
+                       + Path.DirectorySeparatorChar
+                       + Path.GetFileNameWithoutExtension(_outputPath)
+                       + "_tmp_"
+                       + Path.GetExtension(_outputPath);
+        Console.WriteLine("Temp output="+tempName);
+
+        // Generate the video into a media file
+        FFMpegArguments
+            .FromPipeInput(videoFramesSource)
+            .OutputToFile(tempName, overwrite: true, options => options
+                .WithVideoCodec(VideoCodec.LibX264)
+            )
+            .ProcessSynchronously();
+         
         // https://trac.ffmpeg.org/wiki/audio%20types
         var audioSource = new RawAudioPipeSource(CreateAudioFrames())
         {
             Channels = 1, SampleRate = 44100, Format = "u8" // PCM unsigned 8-bit
         };
-
+        
+        // add audio track to it
         FFMpegArguments
-            .FromTwinPipeInput(videoFramesSource, audioSource, _width, _height)
-            //.FromPipeInput(videoFramesSource)
-            //.AddPipeInput(audioSource)
+            .FromFileInput(tempName)
+            .AddPipeInput(audioSource)
             .OutputToFile(_outputPath, overwrite: true, options => options
-                .WithVideoCodec(VideoCodec.LibX264)
                 .WithAudioCodec(AudioCodec.Aac)
             )
-            //.ProcessAsynchronously(); // ??? Doesn't seem to allow sync
             .ProcessSynchronously();
+        
+        File.Delete(tempName);
     }
 
     public void Dispose()
