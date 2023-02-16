@@ -43,9 +43,9 @@ namespace OcvFrames.SortMovies
             _iterator = IterativeHeapSort().GetEnumerator();
         }
 
-        public bool DrawFrame(int frameNumber, Graphics g)
+        public bool DrawFrame(int videoFrameNumber, Graphics g)
         {
-            if (frameNumber > 12_000) return false; // reduce for testing
+            if (videoFrameNumber > 12_000) return false; // reduce for testing
 
             var mid = _height;
             var xs = _width / (_itemCount + 1.0f);
@@ -88,6 +88,13 @@ namespace OcvFrames.SortMovies
                 return false;
             }
         }
+
+        public bool GetAudioSamples(int videoFrameNumber, int audioFrameNumber, out byte[]? samples)
+        {
+            samples = null;
+            return false;
+        }
+
 
         IEnumerable<int> IterativeHeapSort()
         {

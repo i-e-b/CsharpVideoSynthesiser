@@ -47,7 +47,7 @@ namespace OcvFrames.SortMovies
             _iterator = IterativeMergeSort().GetEnumerator();
         }
 
-        public bool DrawFrame(int frameNumber, Graphics g)
+        public bool DrawFrame(int videoFrameNumber, Graphics g)
         {
             //if (frameNumber > 1000) return false; // uncomment to limit for testing
             
@@ -84,6 +84,14 @@ namespace OcvFrames.SortMovies
 
             return _iterator.MoveNext();
         }
+        
+
+        public bool GetAudioSamples(int videoFrameNumber, int audioFrameNumber, out byte[]? samples)
+        {
+            samples = null;
+            return false;
+        }
+
 
         public byte[] Source => _aIsSource ? _a : _b;
         public byte[] Dest => _aIsSource ? _b : _a;

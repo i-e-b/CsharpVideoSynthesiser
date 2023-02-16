@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using NUnit.Framework;
 
 namespace OcvFrames.TestTriggers
@@ -15,10 +16,13 @@ namespace OcvFrames.TestTriggers
             const int height = 450;
             const int fps = 60;
 
-            using var subject = new OcvVideoFileSynthesiser(path, width, height, fps);
+            //using var subject = new OcvVideoFileSynthesiser(path, width, height, fps);
+            using var subject = new FfmpegFileSynthesiser(path, width, height, fps);
             subject.WriteVideo(new SimpleTestGen());
 
             Assert.That(File.Exists(path), "file was not written");
+            Console.WriteLine("\r\n");
+            Console.WriteLine(Path.GetFullPath(path));
         }
     }
 }

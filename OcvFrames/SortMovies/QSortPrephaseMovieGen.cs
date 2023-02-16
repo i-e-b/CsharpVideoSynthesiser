@@ -49,9 +49,9 @@ namespace OcvFrames.SortMovies
             _iterator = RecursiveQSort().GetEnumerator();
         }
 
-        public bool DrawFrame(int frameNumber, Graphics g)
+        public bool DrawFrame(int videoFrameNumber, Graphics g)
         {
-            if (frameNumber > 50_000) return false; // reduce for testing
+            if (videoFrameNumber > 50_000) return false; // reduce for testing
 
             var mid = _height * 0.75f;
             var xs = _width / (_itemCount + 1.0f);
@@ -106,6 +106,13 @@ namespace OcvFrames.SortMovies
                 Console.Write(ex);
                 return false;
             }
+        }
+        
+
+        public bool GetAudioSamples(int videoFrameNumber, int audioFrameNumber, out byte[]? samples)
+        {
+            samples = null;
+            return false;
         }
 
         IEnumerable<int> RecursiveQSort()

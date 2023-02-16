@@ -47,7 +47,7 @@ namespace OcvFrames.SortMovies
             _iterator = InPlaceRadixSort().GetEnumerator();
         }
 
-        public bool DrawFrame(int frameNumber, Graphics g)
+        public bool DrawFrame(int videoFrameNumber, Graphics g)
         {
             //if (frameNumber > 5_000) return false; // reduce for testing
 
@@ -103,6 +103,14 @@ namespace OcvFrames.SortMovies
                 return false;
             }
         }
+        
+
+        public bool GetAudioSamples(int videoFrameNumber, int audioFrameNumber, out byte[]? samples)
+        {
+            samples = null;
+            return false;
+        }
+
 
         IEnumerable<int> InPlaceRadixSort()
         {

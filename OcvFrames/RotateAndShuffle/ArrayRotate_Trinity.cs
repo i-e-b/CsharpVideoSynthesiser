@@ -55,7 +55,7 @@ namespace OcvFrames.RotateAndShuffle
             _iterator = TrinityArrayRotation().GetEnumerator();
         }
         
-        public bool DrawFrame(int frameNumber, Graphics g)
+        public bool DrawFrame(int videoFrameNumber, Graphics g)
         {
             var xs = _width / (_itemCount+1.0f);
             var ys = _height / (_maxValue+5.0f);
@@ -91,6 +91,14 @@ namespace OcvFrames.RotateAndShuffle
             
             return _iterator.MoveNext();
         }
+
+
+        public bool GetAudioSamples(int videoFrameNumber, int audioFrameNumber, out byte[]? samples)
+        {
+            samples = null;
+            return false;
+        }
+
 
         IEnumerable<int> TrinityArrayRotation()
         {

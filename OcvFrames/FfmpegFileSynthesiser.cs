@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Threading.Tasks;
 using FFMpegCore;
 using FFMpegCore.Enums;
 using FFMpegCore.Extend;
@@ -24,11 +25,12 @@ public class FfmpegFileSynthesiser : IDisposable
     private readonly string _outputPath;
     private IVideoGenerator? _source;
     private readonly Bitmap _frameImage;
+    private int _videoFrameNumber;
 
     /// <summary> Default path when installing using `choco install ffmpeg` </summary>
-    private const string FfmpegPath = @"C:\ProgramData\chocolatey\lib\ffmpeg\tools";
-        
-        
+    //private const string FfmpegPath = @"C:\ProgramData\chocolatey\lib\ffmpeg\tools";
+
+
     public FfmpegFileSynthesiser(string filePath, int width, int height, int framesPerSecond)
     {
         _width = width;
@@ -37,42 +39,36 @@ public class FfmpegFileSynthesiser : IDisposable
         _outputPath = Path.GetFullPath(filePath);
         _frameImage = new Bitmap(width, height, PixelFormat.Format24bppRgb);
     }
-        
+
     IEnumerable<IVideoFrame> CreateVideoFrames()
     {
         if (_source is null) yield break;
-        
-        Console.WriteLine("First video frame requested");
-        
+
         using var g = Graphics.FromImage(_frameImage);
-            
+
+        var more = true;
+        _videoFrameNumber = 0;
+        while (more)
+        {
+            more = _source.DrawFrame(_videoFrameNumber++, g);
+            var wrapper = new BitmapVideoFrameWrapper(_frameImage); // we do NOT dispose of this frame, as that kills the source bitmap and nothing else
+            Console.Write('?');
+            yield return wrapper;
+        }
+    }
+
+    private IEnumerable<IAudioSample> CreateAudioFrames()
+    {
+        if (_source is null) yield break;
+        
         var more = true;
         var i = 0;
         while (more)
         {
-            more = _source.DrawFrame(i++, g);
-            var frame = new BitmapVideoFrameWrapper(_frameImage); // we do NOT dispose of this frame, as that kills the source bitmap and nothing else
-            yield return frame;
-            //Console.Write('v');
-        }
-    }
-
-    private IEnumerator<IAudioSample> CreateAudioFrames()
-    {
-        var toneSamples = 44100 / 440;
-        var sample = new byte[toneSamples];
-        var r = Math.PI * 2.0 / toneSamples;
-
-        for (int i = 0; i < toneSamples; i++)
-        {
-            sample[i] = (byte)((Math.Sin(i*r) * 32.0) + 127.0);
-        }
-        
-        Console.WriteLine("First audio frame requested");
-        
-        for (int i = 0; i < 440 * 10; i++) // 10 seconds of audio (video is only 10 seconds)
-        {
-            yield return new PcmAudioSampleWrapper(sample);
+            more = _source.GetAudioSamples(_videoFrameNumber, i++, out var buffer);
+            if (buffer is null) yield break;
+            
+            yield return new PcmAudioSampleWrapper(buffer);
             //Console.Write('a');
         }
     }
@@ -84,19 +80,22 @@ public class FfmpegFileSynthesiser : IDisposable
         {
             FrameRate = _framesPerSecond
         };
-        
+
         // https://trac.ffmpeg.org/wiki/audio%20types
-        var audioSource = new RawAudioPipeSource(CreateAudioFrames()){
+        var audioSource = new RawAudioPipeSource(CreateAudioFrames())
+        {
             Channels = 1, SampleRate = 44100, Format = "u8" // PCM unsigned 8-bit
         };
-            
+
         FFMpegArguments
-            .FromPipeInput(videoFramesSource)
-            .AddPipeInput(audioSource)
-            .OutputToFile(_outputPath, overwrite:true, options => options
+            .FromTwinPipeInput(videoFramesSource, audioSource, _width, _height)
+            //.FromPipeInput(videoFramesSource)
+            //.AddPipeInput(audioSource)
+            .OutputToFile(_outputPath, overwrite: true, options => options
                 .WithVideoCodec(VideoCodec.LibX264)
                 .WithAudioCodec(AudioCodec.Aac)
             )
+            //.ProcessAsynchronously(); // ??? Doesn't seem to allow sync
             .ProcessSynchronously();
     }
 
